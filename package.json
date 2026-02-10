@@ -1,0 +1,25 @@
+{
+  "name": "price-alert-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time cryptocurrency price alert system",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:price-ingestion": "npm run dev -w @price-alert/price-ingestion",
+    "dev:alert-engine": "npm run dev -w @price-alert/alert-engine",
+    "dev:notification-service": "npm run dev -w @price-alert/notification-service",
+    "dev:api-server": "npm run dev -w @price-alert/api-server",
+    "dev:analytics": "npm run dev -w @price-alert/analytics-service",
+    "dev:web": "npm run dev -w @price-alert/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:reset": "docker compose down -v && docker compose up -d"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
