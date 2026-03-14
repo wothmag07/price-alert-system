@@ -58,6 +58,23 @@ services:
       REDIS_HOST: redis
       POSTGRES_HOST: postgres
 
+  notification-service:
+    build: ./services/notification-service
+    container_name: pas-notification
+    depends_on:
+      - kafka
+      - redis
+      - postgres
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: price_alerts
+      RESEND_API_KEY: "${RESEND_API_KEY:-}"
+      FROM_EMAIL: "${FROM_EMAIL:-alerts@pricealert.dev}"
+
   analytics-service:
     build: ./services/analytics-service
     container_name: pas-analytics

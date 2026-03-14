@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 	"github.com/wothmag07/price-alert-system/services/api-server/middleware"
 )
@@ -28,6 +29,7 @@ type WsClientMessage struct {
 type WsHub struct {
 	auth         *middleware.AuthMiddleware
 	kafkaBrokers string
+	rdb          *redis.Client
 	mu           sync.RWMutex
 	clients      map[*wsClient]bool
 }
@@ -40,10 +42,11 @@ type wsClient struct {
 	mu          sync.Mutex
 }
 
-func NewWsHub(auth *middleware.AuthMiddleware, kafkaBrokers string) *WsHub {
+func NewWsHub(auth *middleware.AuthMiddleware, kafkaBrokers string, rdb *redis.Client) *WsHub {
 	return &WsHub{
 		auth:         auth,
 		kafkaBrokers: kafkaBrokers,
+		rdb:          rdb,
 		clients:      make(map[*wsClient]bool),
 	}
 }
@@ -158,8 +161,39 @@ func (h *WsHub) HandleWs(c *gin.Context) {
 	}()
 }
 
-// BroadcastToUser sends a message to all connections of a specific user.
-func (h *WsHub) BroadcastToUser(userID string, data []byte) {
+// StartNotificationSubscriber listens on Redis pub/sub for ws:notify:* channels
+// and forwards alert notifications to the appropriate WebSocket clients.
+func (h *WsHub) StartNotificationSubscriber(ctx context.Context) {
+	pubsub := h.rdb.PSubscribe(ctx, "ws:notify:*")
+
+	go func() {
+		defer pubsub.Close()
+		ch := pubsub.Channel()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				// Channel format: ws:notify:{userId}
+				parts := strings.SplitN(msg.Channel, ":", 3)
+				if len(parts) < 3 {
+					continue
+				}
+				userID := parts[2]
+				h.broadcastToUser(userID, []byte(msg.Payload))
+			}
+		}
+	}()
+
+	log.Println("[WS Hub] Redis notification subscriber started")
+}
+
+// broadcastToUser sends a message to all connections of a specific user.
+func (h *WsHub) broadcastToUser(userID string, data []byte) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for client := range h.clients {

@@ -40,10 +40,11 @@ func main() {
 	alertHandler := handlers.NewAlertHandler(db, rdb)
 	priceHandler := handlers.NewPriceHandler(db, rdb)
 	analyticsHandler := handlers.NewAnalyticsHandler(rdb)
-	wsHub := handlers.NewWsHub(auth, cfg.KafkaBrokers)
+	wsHub := handlers.NewWsHub(auth, cfg.KafkaBrokers, rdb)
 
-	// Start Kafka → WebSocket consumer
+	// Start Kafka → WebSocket consumer + Redis notification subscriber
 	wsHub.StartKafkaConsumer(ctx)
+	wsHub.StartNotificationSubscriber(ctx)
 
 	// Router
 	r := gin.Default()
