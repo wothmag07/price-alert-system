@@ -17,3 +17,7 @@ docker-data/
 # Build artifacts
 *.tsbuildinfo
 coverage/
+
+# Go binaries
+services/price-ingestion/price-ingestion
+services/price-ingestion/price-ingestion.exe

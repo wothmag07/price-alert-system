@@ -46,6 +46,18 @@ services:
     volumes:
       - redis-data:/data
 
+  price-ingestion:
+    build: ./services/price-ingestion
+    container_name: pas-price-ingestion
+    depends_on:
+      - kafka
+      - redis
+      - postgres
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+
 volumes:
   zookeeper-data:
   kafka-data:

@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "dev:price-ingestion": "npm run dev -w @price-alert/price-ingestion",
+    "dev:price-ingestion": "cd services/price-ingestion && go run .",
     "dev:alert-engine": "npm run dev -w @price-alert/alert-engine",
     "dev:notification-service": "npm run dev -w @price-alert/notification-service",
     "dev:api-server": "npm run dev -w @price-alert/api-server",
