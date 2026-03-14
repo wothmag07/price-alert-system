@@ -21,3 +21,11 @@ coverage/
 # Go binaries
 services/price-ingestion/price-ingestion
 services/price-ingestion/price-ingestion.exe
+services/api-server/api-server
+services/api-server/api-server.exe
+services/alert-engine/alert-engine
+services/alert-engine/alert-engine.exe
+services/notification-service/notification-service
+services/notification-service/notification-service.exe
+services/analytics-service/analytics-service
+services/analytics-service/analytics-service.exe
