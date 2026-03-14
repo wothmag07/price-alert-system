@@ -39,6 +39,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(db, auth)
 	alertHandler := handlers.NewAlertHandler(db, rdb)
 	priceHandler := handlers.NewPriceHandler(db, rdb)
+	analyticsHandler := handlers.NewAnalyticsHandler(rdb)
 	wsHub := handlers.NewWsHub(auth, cfg.KafkaBrokers)
 
 	// Start Kafka → WebSocket consumer
@@ -80,6 +81,9 @@ func main() {
 		// Prices
 		protected.GET("/prices/latest", priceHandler.Latest)
 		protected.GET("/prices/history/:symbol", priceHandler.History)
+
+		// Analytics
+		protected.GET("/analytics/top-drops", analyticsHandler.TopDrops)
 	}
 
 	// Start server
