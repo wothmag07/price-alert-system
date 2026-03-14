@@ -1,17 +1,13 @@
-# ---- Build stage ----
-FROM golang:1.22-alpine AS builder
-
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
-COPY go.mod go.sum ./
+COPY internal/ ./internal/
+COPY price-ingestion/ ./price-ingestion/
+WORKDIR /app/price-ingestion
 RUN go mod download
+RUN CGO_ENABLED=0 GOOS=linux go build -o price-ingestion .
 
-COPY *.go ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o /price-ingestion .
-
-# ---- Runtime stage ----
-FROM alpine:3.19
-
+FROM alpine:3.20
 RUN apk add --no-cache ca-certificates
-COPY --from=builder /price-ingestion /price-ingestion
-
-ENTRYPOINT ["/price-ingestion"]
+WORKDIR /app
+COPY --from=builder /app/price-ingestion/price-ingestion .
+CMD ["./price-ingestion"]

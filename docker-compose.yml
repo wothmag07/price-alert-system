@@ -47,7 +47,9 @@ services:
       - redis-data:/data
 
   price-ingestion:
-    build: ./services/price-ingestion
+    build:
+      context: ./services
+      dockerfile: price-ingestion/Dockerfile
     container_name: pas-price-ingestion
     depends_on:
       - kafka
@@ -57,9 +59,31 @@ services:
       KAFKA_BROKERS: kafka:9092
       REDIS_HOST: redis
       POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: price_alerts
+
+  alert-engine:
+    build:
+      context: ./services
+      dockerfile: alert-engine/Dockerfile
+    container_name: pas-alert-engine
+    depends_on:
+      - kafka
+      - redis
+      - postgres
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: price_alerts
 
   notification-service:
-    build: ./services/notification-service
+    build:
+      context: ./services
+      dockerfile: notification-service/Dockerfile
     container_name: pas-notification
     depends_on:
       - kafka
@@ -76,7 +100,9 @@ services:
       FROM_EMAIL: "${FROM_EMAIL:-alerts@pricealert.dev}"
 
   analytics-service:
-    build: ./services/analytics-service
+    build:
+      context: ./services
+      dockerfile: analytics-service/Dockerfile
     container_name: pas-analytics
     depends_on:
       - kafka
@@ -85,23 +111,10 @@ services:
       KAFKA_BROKERS: kafka:9092
       REDIS_HOST: redis
 
-  alert-engine:
-    build: ./services/alert-engine
-    container_name: pas-alert-engine
-    depends_on:
-      - kafka
-      - redis
-      - postgres
-    environment:
-      KAFKA_BROKERS: kafka:9092
-      REDIS_HOST: redis
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: price_alerts
-
   api-server:
-    build: ./services/api-server
+    build:
+      context: ./services
+      dockerfile: api-server/Dockerfile
     container_name: pas-api-server
     depends_on:
       - kafka

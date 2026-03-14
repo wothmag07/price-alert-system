@@ -9,6 +9,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
+	"github.com/wothmag07/price-alert-system/services/internal/types"
 )
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 	// Kafka consumer
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: cfg.KafkaBrokers,
-		Topic:   "price-updates",
+		Topic:   types.TopicPriceUpdates,
 		GroupID: "analytics-service",
 	})
 	defer reader.Close()
@@ -49,7 +50,7 @@ func main() {
 			continue
 		}
 
-		var event PriceUpdateEvent
+		var event types.PriceUpdateEvent
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
 			log.Printf("[Analytics] Unmarshal error: %v", err)
 			continue

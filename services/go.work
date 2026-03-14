@@ -1,0 +1,10 @@
+go 1.24.4
+
+use (
+	./internal
+	./price-ingestion
+	./api-server
+	./alert-engine
+	./notification-service
+	./analytics-service
+)

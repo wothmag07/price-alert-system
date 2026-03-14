@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/wothmag07/price-alert-system/services/internal/types"
 )
 
 const (
@@ -28,15 +29,15 @@ func NewAlertStore(db *pgxpool.Pool, rdb *redis.Client) *AlertStore {
 
 // GetActiveAlerts returns active alerts for a symbol.
 // Checks Redis cache first, falls back to PostgreSQL on cache miss.
-func (s *AlertStore) GetActiveAlerts(ctx context.Context, symbol string) ([]AlertRule, error) {
+func (s *AlertStore) GetActiveAlerts(ctx context.Context, symbol string) ([]types.AlertRule, error) {
 	cacheKey := fmt.Sprintf(alertCacheKeyFmt, symbol)
 
 	// Try Redis cache
 	cached, err := s.rdb.SMembers(ctx, cacheKey).Result()
 	if err == nil && len(cached) > 0 {
-		rules := make([]AlertRule, 0, len(cached))
+		rules := make([]types.AlertRule, 0, len(cached))
 		for _, raw := range cached {
-			var rule AlertRule
+			var rule types.AlertRule
 			if err := json.Unmarshal([]byte(raw), &rule); err != nil {
 				continue
 			}
@@ -57,11 +58,11 @@ func (s *AlertStore) GetActiveAlerts(ctx context.Context, symbol string) ([]Aler
 	}
 	defer rows.Close()
 
-	rules := make([]AlertRule, 0)
+	rules := make([]types.AlertRule, 0)
 	members := make([]interface{}, 0)
 
 	for rows.Next() {
-		var r AlertRule
+		var r types.AlertRule
 		if err := rows.Scan(&r.ID, &r.UserID, &r.Symbol, &r.Condition, &r.Threshold); err != nil {
 			log.Printf("[AlertStore] Scan error: %v", err)
 			continue
@@ -71,7 +72,7 @@ func (s *AlertStore) GetActiveAlerts(ctx context.Context, symbol string) ([]Aler
 		members = append(members, string(jsonBytes))
 	}
 
-	// Populate cache (even if empty — use short TTL to avoid repeated queries)
+	// Populate cache
 	if len(members) > 0 {
 		pipe := s.rdb.Pipeline()
 		pipe.SAdd(ctx, cacheKey, members...)
@@ -110,7 +111,7 @@ func (s *AlertStore) MarkTriggered(ctx context.Context, alertID, symbol string, 
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	// Invalidate cache so next lookup fetches fresh data
+	// Invalidate cache
 	s.rdb.Del(ctx, fmt.Sprintf(alertCacheKeyFmt, symbol))
 
 	return nil

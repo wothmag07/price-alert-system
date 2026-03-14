@@ -5,6 +5,8 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
+
+	"github.com/wothmag07/price-alert-system/services/internal/types"
 )
 
 func main() {
@@ -25,7 +27,7 @@ func main() {
 	log.Println("[Price Ingestion] Connected to Kafka, Redis, PostgreSQL")
 
 	log.Printf("[Price Ingestion] Tracking symbols: %v", cfg.TrackedSymbols)
-	log.Printf("[Price Ingestion] Publishing to topic: %s", kafkaTopic)
+	log.Printf("[Price Ingestion] Publishing to topic: %s", types.TopicPriceUpdates)
 
 	// Create a buffered channel for WebSocket messages
 	messages := make(chan []byte, 256)
@@ -43,8 +45,6 @@ func main() {
 		case raw := <-messages:
 			event := parseMiniTicker(raw)
 			if event != nil {
-				// Fire-and-forget: launch publish in a goroutine
-				// to avoid backpressure on the WebSocket receive loop
 				go pub.Publish(ctx, event)
 			}
 		}

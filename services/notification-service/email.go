@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/wothmag07/price-alert-system/services/internal/types"
 )
 
 const resendAPI = "https://api.resend.com/emails"
@@ -21,8 +23,7 @@ type resendRequest struct {
 }
 
 // sendEmail sends an alert notification email via the Resend API.
-// Retries up to maxRetries on failure.
-func sendEmail(apiKey, from, toEmail string, event AlertTriggerEvent) error {
+func sendEmail(apiKey, from, toEmail string, event types.AlertTriggerEvent) error {
 	if apiKey == "" {
 		log.Printf("[Email] Skipping email (no RESEND_API_KEY configured)")
 		return nil

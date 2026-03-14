@@ -4,17 +4,9 @@ import (
 	"encoding/json"
 	"math"
 	"strconv"
-)
 
-// PriceUpdateEvent is the canonical event published downstream.
-// Field names match the TypeScript PriceUpdateEvent interface exactly.
-type PriceUpdateEvent struct {
-	Symbol    string  `json:"symbol"`
-	Price     float64 `json:"price"`
-	Volume    float64 `json:"volume"`
-	Change24h float64 `json:"change24h"`
-	Timestamp int64   `json:"timestamp"`
-}
+	"github.com/wothmag07/price-alert-system/services/internal/types"
+)
 
 // binanceMiniTicker represents the raw Binance 24hr miniTicker payload.
 type binanceMiniTicker struct {
@@ -28,7 +20,7 @@ type binanceMiniTicker struct {
 
 // parseMiniTicker validates and converts raw JSON bytes into a PriceUpdateEvent.
 // Returns nil if the message is not a valid miniTicker.
-func parseMiniTicker(raw []byte) *PriceUpdateEvent {
+func parseMiniTicker(raw []byte) *types.PriceUpdateEvent {
 	var ticker binanceMiniTicker
 	if err := json.Unmarshal(raw, &ticker); err != nil {
 		return nil
@@ -63,7 +55,7 @@ func parseMiniTicker(raw []byte) *PriceUpdateEvent {
 		change24h = ((closePrice - openPrice) / openPrice) * 100
 	}
 
-	return &PriceUpdateEvent{
+	return &types.PriceUpdateEvent{
 		Symbol:    ticker.Symbol,
 		Price:     closePrice,
 		Volume:    volume,

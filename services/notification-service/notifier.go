@@ -9,12 +9,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
+	"github.com/wothmag07/price-alert-system/services/internal/types"
 )
 
-const (
-	triggerTopic = "alert-triggers"
-	groupID      = "notification-service"
-)
+const groupID = "notification-service"
 
 // Notifier consumes alert triggers and delivers notifications.
 type Notifier struct {
@@ -29,7 +27,7 @@ type Notifier struct {
 func NewNotifier(cfg Config, db *pgxpool.Pool, rdb *redis.Client) *Notifier {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: cfg.KafkaBrokers,
-		Topic:   triggerTopic,
+		Topic:   types.TopicAlertTriggers,
 		GroupID: groupID,
 	})
 
@@ -45,7 +43,7 @@ func NewNotifier(cfg Config, db *pgxpool.Pool, rdb *redis.Client) *Notifier {
 
 // Run starts the consume loop. Blocks until ctx is cancelled.
 func (n *Notifier) Run(ctx context.Context) {
-	log.Printf("[Notifier] Consuming from %q (group: %s)", triggerTopic, groupID)
+	log.Printf("[Notifier] Consuming from %q (group: %s)", types.TopicAlertTriggers, groupID)
 
 	for {
 		msg, err := n.reader.ReadMessage(ctx)
@@ -57,7 +55,7 @@ func (n *Notifier) Run(ctx context.Context) {
 			continue
 		}
 
-		var event AlertTriggerEvent
+		var event types.AlertTriggerEvent
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
 			log.Printf("[Notifier] Unmarshal error: %v", err)
 			continue
@@ -67,14 +65,13 @@ func (n *Notifier) Run(ctx context.Context) {
 	}
 }
 
-func (n *Notifier) process(ctx context.Context, event AlertTriggerEvent) {
+func (n *Notifier) process(ctx context.Context, event types.AlertTriggerEvent) {
 	status := DeliveryStatus{}
 
 	// Check per-user rate limit
 	allowed, err := checkRateLimit(ctx, n.rdb, event.UserID, n.maxPerHour)
 	if err != nil {
 		log.Printf("[Notifier] Rate limit check error for user %s: %v", event.UserID, err)
-		// On Redis failure, allow the notification through
 		allowed = true
 	}
 

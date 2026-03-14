@@ -11,10 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
+	"github.com/wothmag07/price-alert-system/services/internal/types"
 )
 
 const (
-	kafkaTopic   = "price-updates"
 	redisKeyFmt  = "price:latest:%s"
 	redisTTL     = 60 * time.Second
 	dbThrottleMs = 10_000
@@ -36,7 +36,7 @@ func NewPublisher(ctx context.Context, cfg Config) (*Publisher, error) {
 	// Kafka writer
 	w := &kafka.Writer{
 		Addr:                   kafka.TCP(cfg.KafkaBrokers...),
-		Topic:                  kafkaTopic,
+		Topic:                  types.TopicPriceUpdates,
 		Balancer:               &kafka.LeastBytes{},
 		AllowAutoTopicCreation: true,
 	}
@@ -50,11 +50,7 @@ func NewPublisher(ctx context.Context, cfg Config) (*Publisher, error) {
 	}
 
 	// PostgreSQL pool
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		cfg.PostgresUser, cfg.PostgresPassword,
-		cfg.PostgresHost, cfg.PostgresPort, cfg.PostgresDB,
-	)
-	pool, err := pgxpool.New(ctx, connStr)
+	pool, err := pgxpool.New(ctx, cfg.PostgresURL)
 	if err != nil {
 		return nil, fmt.Errorf("postgres connect: %w", err)
 	}
@@ -71,7 +67,7 @@ func NewPublisher(ctx context.Context, cfg Config) (*Publisher, error) {
 }
 
 // Publish sends a price event to Kafka, Redis, and PostgreSQL in parallel.
-func (p *Publisher) Publish(ctx context.Context, event *PriceUpdateEvent) {
+func (p *Publisher) Publish(ctx context.Context, event *types.PriceUpdateEvent) {
 	jsonBytes, err := json.Marshal(event)
 	if err != nil {
 		log.Printf("[Publisher] JSON marshal error: %v", err)
@@ -113,7 +109,7 @@ func (p *Publisher) Publish(ctx context.Context, event *PriceUpdateEvent) {
 }
 
 // maybePersist writes to price_history at most once per 10 seconds per symbol.
-func (p *Publisher) maybePersist(ctx context.Context, event *PriceUpdateEvent) {
+func (p *Publisher) maybePersist(ctx context.Context, event *types.PriceUpdateEvent) {
 	p.mu.Lock()
 	lastWrite := p.lastDBWrite[event.Symbol]
 	if event.Timestamp-lastWrite < dbThrottleMs {

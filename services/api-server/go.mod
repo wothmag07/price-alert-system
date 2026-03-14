@@ -10,7 +10,10 @@ require (
 	github.com/redis/go-redis/v9 v9.17.3
 	github.com/segmentio/kafka-go v0.4.50
 	golang.org/x/crypto v0.39.0
+	github.com/wothmag07/price-alert-system/services/internal v0.0.0-00010101000000-000000000000
 )
+
+replace github.com/wothmag07/price-alert-system/services/internal => ../internal
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

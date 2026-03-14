@@ -6,31 +6,28 @@ import (
 	"log"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/wothmag07/price-alert-system/services/internal/types"
 )
 
-const (
-	priceTopic   = "price-updates"
-	triggerTopic = "alert-triggers"
-	groupID      = "alert-engine"
-)
+const groupID = "alert-engine"
 
 // Engine consumes price updates, matches against alert rules, and publishes triggers.
 type Engine struct {
-	store       *AlertStore
-	reader      *kafka.Reader
+	store         *AlertStore
+	reader        *kafka.Reader
 	triggerWriter *kafka.Writer
 }
 
 func NewEngine(brokers []string, store *AlertStore) *Engine {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: brokers,
-		Topic:   priceTopic,
+		Topic:   types.TopicPriceUpdates,
 		GroupID: groupID,
 	})
 
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(brokers...),
-		Topic:                  triggerTopic,
+		Topic:                  types.TopicAlertTriggers,
 		Balancer:               &kafka.LeastBytes{},
 		AllowAutoTopicCreation: true,
 	}
@@ -44,7 +41,7 @@ func NewEngine(brokers []string, store *AlertStore) *Engine {
 
 // Run starts the consume loop. Blocks until ctx is cancelled.
 func (e *Engine) Run(ctx context.Context) {
-	log.Printf("[Alert Engine] Consuming from %q (group: %s)", priceTopic, groupID)
+	log.Printf("[Alert Engine] Consuming from %q (group: %s)", types.TopicPriceUpdates, groupID)
 
 	for {
 		msg, err := e.reader.ReadMessage(ctx)
@@ -56,7 +53,7 @@ func (e *Engine) Run(ctx context.Context) {
 			continue
 		}
 
-		var event PriceUpdateEvent
+		var event types.PriceUpdateEvent
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
 			log.Printf("[Alert Engine] Unmarshal error: %v", err)
 			continue
@@ -66,7 +63,7 @@ func (e *Engine) Run(ctx context.Context) {
 	}
 }
 
-func (e *Engine) processPrice(ctx context.Context, event PriceUpdateEvent) {
+func (e *Engine) processPrice(ctx context.Context, event types.PriceUpdateEvent) {
 	rules, err := e.store.GetActiveAlerts(ctx, event.Symbol)
 	if err != nil {
 		log.Printf("[Alert Engine] Failed to load alerts for %s: %v", event.Symbol, err)
@@ -81,14 +78,12 @@ func (e *Engine) processPrice(ctx context.Context, event PriceUpdateEvent) {
 		log.Printf("[Alert Engine] TRIGGERED alert %s: %s %s %.8f (price: %.8f)",
 			rule.ID, rule.Symbol, rule.Condition, rule.Threshold, event.Price)
 
-		// Update DB and invalidate cache
 		if err := e.store.MarkTriggered(ctx, rule.ID, rule.Symbol, event.Price); err != nil {
 			log.Printf("[Alert Engine] Failed to mark triggered %s: %v", rule.ID, err)
 			continue
 		}
 
-		// Publish trigger event to Kafka
-		trigger := AlertTriggerEvent{
+		trigger := types.AlertTriggerEvent{
 			AlertID:        rule.ID,
 			UserID:         rule.UserID,
 			Symbol:         rule.Symbol,
