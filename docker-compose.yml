@@ -58,6 +58,21 @@ services:
       REDIS_HOST: redis
       POSTGRES_HOST: postgres
 
+  alert-engine:
+    build: ./services/alert-engine
+    container_name: pas-alert-engine
+    depends_on:
+      - kafka
+      - redis
+      - postgres
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: price_alerts
+
   api-server:
     build: ./services/api-server
     container_name: pas-api-server
